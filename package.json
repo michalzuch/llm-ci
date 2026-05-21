@@ -1,0 +1,23 @@
+{
+  "name": "llm-ci",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "LLM-powered pipeline that generates llms.txt, llms-full.txt, and JSON-LD schema from markdown source files",
+  "author": "Software Mansion",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swmansion/llm-ci"
+  },
+  "keywords": ["llms.txt", "ai", "seo", "github-action", "documentation"],
+  "bin": {
+    "llm-ci": "./bin/llm-ci.js"
+  },
+  "scripts": {
+    "start": "node bin/llm-ci.js"
+  },
+  "dependencies": {
+    "glob": "^11.0.0",
+    "node-html-parser": "^6.1.13"
+  }
+}

@@ -1,0 +1,104 @@
+name: 'Generate llms.txt'
+description: 'Generate llms.txt, llms-full.txt, and JSON-LD schema from your documentation for AI discoverability'
+
+inputs:
+  content-dir:
+    description: 'Directory containing HTML, Markdown, or framework source files to analyze'
+    required: true
+  site-url:
+    description: 'Public base URL of the site (e.g. https://docs.example.com)'
+    required: true
+  site-name:
+    description: 'Human-readable product or site name'
+    required: true
+  dist-dir:
+    description: 'Built HTML output directory — enables JSON-LD injection into HTML files'
+    required: false
+    default: ''
+  llm-base-url:
+    description: 'OpenAI-compatible API base URL'
+    required: false
+    default: 'http://localhost:11434/v1'
+  llm-model:
+    description: 'Model identifier to use for analysis'
+    required: false
+    default: 'qwen2.5:3b'
+  llm-api-key:
+    description: 'API key for the LLM provider (not required for Ollama)'
+    required: false
+    default: 'ollama'
+  ollama-setup:
+    description: 'Install and start Ollama on the runner — disable when using an external LLM API'
+    required: false
+    default: 'true'
+  llm-concurrency:
+    description: 'Number of concurrent LLM requests'
+    required: false
+    default: '5'
+  commit:
+    description: 'Commit and push generated files back to the branch'
+    required: false
+    default: 'false'
+  commit-message:
+    description: 'Git commit message for the generated files'
+    required: false
+    default: 'chore: regenerate llms.txt'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Ollama
+      if: inputs.ollama-setup == 'true'
+      shell: bash
+      run: curl -fsSL https://ollama.ai/install.sh | sh
+
+    - name: Start Ollama and pull model
+      if: inputs.ollama-setup == 'true'
+      shell: bash
+      env:
+        LLM_MODEL: ${{ inputs.llm-model }}
+      run: |
+        ollama serve &
+        timeout 60 bash -c 'until curl -sf http://localhost:11434/api/tags; do sleep 2; done'
+        ollama pull "$LLM_MODEL"
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci --ignore-scripts
+
+    - name: Generate llms.txt
+      shell: bash
+      env:
+        CONTENT_DIR: ${{ inputs.content-dir }}
+        SITE_URL: ${{ inputs.site-url }}
+        SITE_NAME: ${{ inputs.site-name }}
+        DIST_DIR: ${{ inputs.dist-dir }}
+        LLM_BASE_URL: ${{ inputs.llm-base-url }}
+        LLM_MODEL: ${{ inputs.llm-model }}
+        LLM_API_KEY: ${{ inputs.llm-api-key }}
+        LLM_CONCURRENCY: ${{ inputs.llm-concurrency }}
+      run: |
+        node "${{ github.action_path }}/bin/llm-ci.js" \
+          --content-dir "$CONTENT_DIR" \
+          --site-url "$SITE_URL" \
+          --site-name "$SITE_NAME" \
+          ${DIST_DIR:+--dist-dir "$DIST_DIR"} \
+          --llm-base-url "$LLM_BASE_URL" \
+          --llm-model "$LLM_MODEL" \
+          --llm-api-key "$LLM_API_KEY"
+
+    - name: Commit generated files
+      if: inputs.commit == 'true'
+      shell: bash
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add --all
+        git diff --staged --quiet || git commit -m "${{ inputs.commit-message }}"
+        git push

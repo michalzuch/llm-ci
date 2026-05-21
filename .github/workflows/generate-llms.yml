@@ -1,0 +1,33 @@
+name: Generate llms.txt
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # If your docs site needs a build step, add it here before the action.
+      # Example for Docusaurus:
+      #   - run: npm ci && npm run build
+      #     working-directory: ./docs
+
+      - name: Generate llms.txt
+        # When using this action from another repo, replace "./" with the
+        # published action reference, e.g.: swmansion/llm-ci@v1
+        uses: ./
+        with:
+          content-dir: ${{ github.workspace }}
+          site-url: ${{ vars.SITE_URL }}
+          site-name: ${{ vars.SITE_NAME }}
+          # dist-dir: ${{ github.workspace }}/dist   # uncomment to enable JSON-LD injection
+          llm-concurrency: '5'
+          commit: 'true'
+          commit-message: 'chore: regenerate llms.txt [skip ci]'

@@ -1,0 +1,6 @@
+node_modules/
+output/
+llms.txt
+llms-full.txt
+llm-manifest.json
+bun.lock

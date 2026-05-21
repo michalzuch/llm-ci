@@ -1,0 +1,49 @@
+# Copy this file into YOUR repo at .github/workflows/generate-llms.yml
+# It uses the llm-ci action to generate llms.txt after every PR merge to main.
+#
+# Required setup in your repo (Settings → Secrets and variables):
+#   Variables: SITE_URL   — e.g. https://docs.example.com
+#              SITE_NAME  — e.g. "My Product"
+#
+# No API key needed — the action runs Ollama directly on the GitHub runner.
+
+name: Generate llms.txt
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to commit generated files back
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Optional: build your docs site first so the action can read the HTML output.
+      # Uncomment and adjust the block below if you want JSON-LD injection too.
+      #
+      # - name: Build docs
+      #   run: npm ci && npm run build
+      #   working-directory: ./docs
+
+      - name: Generate llms.txt
+        uses: swmansion/llm-ci@v1   # <-- pin to a release tag or commit SHA in production
+        with:
+          content-dir: ${{ github.workspace }}           # root of the checked-out repo
+          # content-dir: ${{ github.workspace }}/docs    # or a sub-directory with your docs
+          site-url: ${{ vars.SITE_URL }}
+          site-name: ${{ vars.SITE_NAME }}
+          # dist-dir: ${{ github.workspace }}/docs/build # uncomment to enable JSON-LD injection
+          llm-concurrency: '5'
+          commit: 'true'
+          commit-message: 'chore: regenerate llms.txt [skip ci]'
+
+      # To use an external LLM API instead of Ollama, add:
+      #   ollama-setup: 'false'
+      #   llm-base-url: 'https://api.openai.com/v1'
+      #   llm-model: 'gpt-4o-mini'
+      #   llm-api-key: ${{ secrets.LLM_API_KEY }}
